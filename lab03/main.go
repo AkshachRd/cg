@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
-	"github.com/go-gl/mathgl/mgl32"
 	"log"
-	"math"
 	"runtime"
 	"strings"
 )
@@ -41,56 +39,61 @@ func main() {
 		panic(err)
 	}
 
+	window.SetKeyCallback(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
+		if glfw.KeyEscape == key && glfw.Press == action {
+			window.SetShouldClose(true)
+		}
+	})
+
+	w, h := window.GetFramebufferSize()
+	gl.Viewport(0, 0, int32(w), int32(h))
+
 	program := initOpenGL()
-	gl.UseProgram(program)
 
 	var vao uint32
 	gl.GenVertexArrays(1, &vao)
 	gl.BindVertexArray(vao)
 
-	vertices := generateGraphData(-6*math.Pi, 6*math.Pi, 1000)
+	vertices := []float32{
+		0.5, 0.5, 0.0,
+		0.5, -0.5, 0.0,
+		-0.5, -0.5, 0.0,
+		-0.5, 0.5, 0.0,
+	}
+	indices := []uint32{
+		0, 1, 3,
+		1, 2, 3,
+	}
+
 	var vbo uint32
 	gl.GenBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 	gl.BufferData(gl.ARRAY_BUFFER, len(vertices)*4, gl.Ptr(vertices), gl.STATIC_DRAW)
 
-	gl.VertexAttribPointer(0, 2, gl.FLOAT, false, 0, nil)
+	var ibo uint32
+	gl.GenBuffers(1, &ibo)
+	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo)
+	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, len(indices)*4, gl.Ptr(indices), gl.STATIC_DRAW)
+
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 0, nil)
 	gl.EnableVertexAttribArray(0)
 
+	gl.BindVertexArray(0)
+
+	gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
+
 	for !window.ShouldClose() {
-		draw(window, program, vao)
-		window.SwapBuffers()
 		glfw.PollEvents()
+		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
+		gl.Clear(gl.COLOR_BUFFER_BIT)
+
+		gl.UseProgram(program)
+		gl.BindVertexArray(vao)
+		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, nil)
+		gl.BindVertexArray(0)
+
+		window.SwapBuffers()
 	}
-}
-
-func generateGraphData(start, end float64, steps int) []float32 {
-	stepSize := (end - start) / float64(steps)
-	data := make([]float32, 0, steps*2)
-	for i := 0; i <= steps; i++ {
-		x := start + float64(i)*stepSize
-		y := math.Sin(3*x) + math.Cos(2*x+12*math.Pi)
-		data = append(data, float32(x), float32(y))
-	}
-	return data
-}
-
-func draw(window *glfw.Window, program uint32, vao uint32) {
-	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-
-	width, height := window.GetSize()
-	aspect := float32(width) / float32(height)
-	var projection mgl32.Mat4
-	if width >= height {
-		projection = mgl32.Ortho2D(-6*math.Pi*aspect, 6*math.Pi*aspect, -10, 10)
-	} else {
-		projection = mgl32.Ortho2D(-6*math.Pi, 6*math.Pi, -10/aspect, 10/aspect)
-	}
-
-	gl.UniformMatrix4fv(gl.GetUniformLocation(program, gl.Str("projection\x00")), 1, false, &projection[0])
-
-	gl.BindVertexArray(vao)
-	gl.DrawArrays(gl.LINE_STRIP, 0, 1001)
 }
 
 func initOpenGL() uint32 {
@@ -140,17 +143,20 @@ func compileShader(source string, shaderType uint32) (uint32, error) {
 
 const vertexShaderSource = `
 #version 410
-in vec2 position;
-uniform mat4 projection;
-void main() {
-    gl_Position = projection * vec4(position, 0.0, 1.0);
+layout (location = 0) in vec3 position;
+
+void main()
+{
+    gl_Position = vec4(position.x, position.y, position.z, 1.0);
 }
 ` + "\x00"
 
 const fragmentShaderSource = `
 #version 410
 out vec4 color;
-void main() {
-    color = vec4(1.0, 0.0, 0.0, 1.0); // Red color for the graph
+
+void main()
+{
+	color = vec4(1.0f, 0.5f, 0.2f, 1.0f);
 }
 ` + "\x00"
