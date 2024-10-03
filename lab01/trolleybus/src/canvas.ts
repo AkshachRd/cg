@@ -1,4 +1,3 @@
-import { Initials } from "./entities/initials";
 import { Trolleybus } from "./entities/trolleybus";
 import { DragAndDrop } from "./libs/dragAndDrop";
 
@@ -9,9 +8,8 @@ export const setupCanvas = (canvas: HTMLCanvasElement) => {
     }
 
     const trolleybus1 = new Trolleybus(250, 50);
-    const initials = new Initials(250, 50);
 
-    const park = [initials];
+    const park = [trolleybus1];
     park.forEach((tb) => {tb.draw(ctx);});
     const dnd = new DragAndDrop(canvas, park);
 }

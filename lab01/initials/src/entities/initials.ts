@@ -11,9 +11,9 @@ export class Initials implements Shape {
     public width: number = LETTER_WIDTH * 3 + LETTER_OFFSET * 2;
     public height: number = LETTER_HEIGHT;
 
-    private vyKh: number = 15;
-    private vyN: number = 25;
     private count: number = 0;
+    private animationFrame: number | undefined;
+    private isAnimating: boolean = false;
 
     constructor(x: number, y: number) {
         this.x = x;
@@ -21,34 +21,40 @@ export class Initials implements Shape {
     }
 
     drawLetterKh(ctx: CanvasRenderingContext2D, coords: Coords) {
+        const angle = this.count * 0.1;
+        const y = coords.y - Math.abs(Math.sin(angle)) * LETTER_HEIGHT;
+
         ctx.beginPath();
         ctx.strokeStyle = "yellow";
         ctx.lineCap = "square";
         ctx.lineWidth = 15;
 
-        ctx.moveTo(coords.x, coords.y);
-        ctx.lineTo(coords.x + LETTER_WIDTH, coords.y + LETTER_HEIGHT);
+        ctx.moveTo(coords.x, y);
+        ctx.lineTo(coords.x + LETTER_WIDTH, y + LETTER_HEIGHT);
 
-        ctx.moveTo(coords.x + LETTER_WIDTH, coords.y);
-        ctx.lineTo(coords.x, coords.y + LETTER_HEIGHT);
+        ctx.moveTo(coords.x + LETTER_WIDTH, y);
+        ctx.lineTo(coords.x, y + LETTER_HEIGHT);
 
         ctx.stroke();
     }
 
     drawLetterN(ctx: CanvasRenderingContext2D, coords: Coords) {
+        const angle = this.count * 0.1;
+        const y = coords.y - Math.abs(Math.sin(angle)) * LETTER_HEIGHT;
+
         ctx.beginPath();
         ctx.strokeStyle = "blue";
         ctx.lineCap = "butt";
         ctx.lineWidth = 5;
 
-        ctx.moveTo(coords.x, coords.y);
-        ctx.lineTo(coords.x, coords.y + LETTER_HEIGHT);
+        ctx.moveTo(coords.x, y);
+        ctx.lineTo(coords.x, y + LETTER_HEIGHT);
 
-        ctx.moveTo(coords.x + LETTER_WIDTH, coords.y);
-        ctx.lineTo(coords.x + LETTER_WIDTH, coords.y + LETTER_HEIGHT);
+        ctx.moveTo(coords.x + LETTER_WIDTH, y);
+        ctx.lineTo(coords.x + LETTER_WIDTH, y + LETTER_HEIGHT);
 
-        ctx.moveTo(coords.x, coords.y + LETTER_HEIGHT / 2);
-        ctx.lineTo(coords.x + LETTER_WIDTH, coords.y + LETTER_HEIGHT / 2);
+        ctx.moveTo(coords.x, y + LETTER_HEIGHT / 2);
+        ctx.lineTo(coords.x + LETTER_WIDTH, y + LETTER_HEIGHT / 2);
 
         ctx.stroke();
     }
@@ -74,17 +80,35 @@ export class Initials implements Shape {
         ctx.lineTo(coords.x + LETTER_WIDTH, y + LETTER_HEIGHT);
         ctx.stroke();
 
-        this.count++;
     }
 
     draw(ctx: CanvasRenderingContext2D): void {
         this.drawLetterD(ctx, {x: this.x, y: this.y});
-        if (this.count > 1000) {
-            this.count = 0;
-        }
         this.drawLetterN(ctx, {x: this.x + LETTER_OFFSET + LETTER_WIDTH, y: this.y});
         this.drawLetterKh(ctx, {x: this.x + (LETTER_OFFSET + LETTER_WIDTH) * 2, y: this.y});
-        // @ts-ignore
-        window.requestAnimationFrame(this.draw(ctx));
+
+        this.count++;
+    }
+
+    startAnimating(ctx: CanvasRenderingContext2D) {
+        if (!this.isAnimating) {
+            this.animate(ctx);
+            this.isAnimating = true;
+        }
+    }
+
+    animate(ctx: CanvasRenderingContext2D) {
+        ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+        this.draw(ctx);
+        this.animationFrame = window.requestAnimationFrame(() => this.animate(ctx));
+    }
+
+    stopAnimating() {
+        if (this.isAnimating) {
+            if (this.animationFrame !== undefined) {
+                window.cancelAnimationFrame(this.animationFrame);
+            }
+            this.isAnimating = false;
+        }
     }
 }
